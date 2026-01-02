@@ -13,6 +13,8 @@ class TSB_DB_Manager {
             symbol_name varchar(50) NOT NULL,
             lot_size int NOT NULL DEFAULT 1,
             stop_loss float NOT NULL,
+            expiry_type varchar(20) DEFAULT 'Monthly',
+            expiry_day varchar(20) DEFAULT '',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id)
         ) $charset_collate;";
@@ -30,7 +32,6 @@ class TSB_DB_Manager {
             t2 float NOT NULL,
             t3 float NOT NULL,
             high_price float DEFAULT 0,
-            low_price float DEFAULT 0,
             profit_loss float DEFAULT 0,
             trade_status varchar(20) DEFAULT 'Pending',
             telegram_msg_id varchar(50) DEFAULT NULL,

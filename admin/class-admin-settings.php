@@ -15,6 +15,7 @@ class TSB_Admin_Settings {
             update_option( 'tsb_allow_entry_update', isset($_POST['tsb_allow_entry_update']) ? 1 : 0 );
             update_option( 'tsb_show_high_pl', isset($_POST['tsb_show_high_pl']) ? 1 : 0 );
             update_option( 'tsb_form_layout_open', isset($_POST['tsb_form_layout_open']) ? 1 : 0 );
+            update_option( 'tsb_skip_expiry_today', isset($_POST['tsb_skip_expiry_today']) ? 1 : 0 ); // New Setting
             
             // Message Toggles (Strict Isset Check)
             update_option( 'tsb_msg_on_new', isset($_POST['tsb_msg_on_new']) ? 1 : 0 );
@@ -85,7 +86,8 @@ class TSB_Admin_Settings {
                     <label><input type="checkbox" name="tsb_allow_edit" value="1" <?php checked( get_option('tsb_allow_edit', 0), 1 ); ?>> Allow Delete in Journal</label><br>
                     <label><input type="checkbox" name="tsb_allow_entry_update" value="1" <?php checked( get_option('tsb_allow_entry_update', 0), 1 ); ?>> Allow Update Entry</label><br>
                     <label><input type="checkbox" name="tsb_show_high_pl" value="1" <?php checked( get_option('tsb_show_high_pl', 0), 1 ); ?>> Show P/L in High Msg</label><br>
-                    <label><input type="checkbox" name="tsb_form_layout_open" value="1" <?php checked( get_option('tsb_form_layout_open', 0), 1 ); ?>> Form Details Open Default</label>
+                    <label><input type="checkbox" name="tsb_form_layout_open" value="1" <?php checked( get_option('tsb_form_layout_open', 0), 1 ); ?>> Form Details Open Default</label><br>
+                    <label style="color: #d63638; font-weight: bold;"><input type="checkbox" name="tsb_skip_expiry_today" value="1" <?php checked( get_option('tsb_skip_expiry_today', 0), 1 ); ?>> Skip Today if Expiry Day (Select Next)</label>
                 </p>
                 
                 <hr>

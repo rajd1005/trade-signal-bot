@@ -22,7 +22,6 @@ jQuery(document).ready(function($) {
                         if(res.data && res.data.html) {
                             $('#row-' + id).replaceWith(res.data.html);
                             if(window.TSB && TSB.showToast) TSB.showToast('Entry Updated');
-                            // Fix: Update Dashboard Status Bar
                             if(res.data.stats && window.TSB && TSB.updateDashboard) {
                                 TSB.updateDashboard(res.data.stats);
                             }
@@ -83,14 +82,14 @@ jQuery(document).ready(function($) {
                 val: val 
             }, function(res) {
                 if(res.success) {
-                    var displayVal = (val > 0) ? val : '-';
-                    row.find('.hl-' + target + '-display').text(displayVal);
-
-                    if(res.data.pl) {
-                        var plSpan = row.find('.pl-text');
-                        var plVal = parseFloat(res.data.pl.replace(/,/g,''));
-                        plSpan.text(res.data.pl).css('color', plVal >= 0 ? '#2e7d32' : '#c62828');
+                    // Update Row from Server to ensure state is synced
+                    if(res.data.html) {
+                        row.replaceWith(res.data.html);
+                    } else {
+                        var displayVal = (val > 0) ? val : '-';
+                        row.find('.hl-' + target + '-display').text(displayVal);
                     }
+
                     if(res.data.stats && window.TSB && TSB.updateDashboard) {
                         TSB.updateDashboard(res.data.stats);
                     }
@@ -118,47 +117,14 @@ jQuery(document).ready(function($) {
             if(res.success) {
                 if(window.TSB && window.TSB.showToast) TSB.showToast('Update Sent!');
                 
-                if(res.data && window.TSB && TSB.updateDashboard) {
-                    TSB.updateDashboard(res.data);
-                    if(res.data.row_pl) {
-                        var plSpan = $('#row-'+id).find('.pl-text');
-                        var plVal = parseFloat(res.data.row_pl.replace(/,/g,''));
-                        plSpan.text(res.data.row_pl).css('color', plVal >= 0 ? '#2e7d32' : '#c62828');
-                    }
+                // Update Dashboard Stats
+                if(res.data && res.data.stats && window.TSB && TSB.updateDashboard) {
+                    TSB.updateDashboard(res.data.stats);
                 }
                 
-                var row = $('#row-'+id);
-                var badge = row.find('.status-badge');
-                row.attr('data-status', type); 
-
-                if(type === 'Entry') {
-                    badge.text('Active');
-                    btn.attr('disabled', true).css('opacity', 0.4);
-                    row.find('.edit-entry-btn').remove();
-                    row.find('.hl-edit-btn, .high-btn, .btn-sl, .btn-t1').removeAttr('disabled').css('opacity', 1).css('pointer-events','auto'); 
-                }
-                else if(type === 'T1') {
-                    badge.text('T1');
-                    btn.attr('disabled', true).css('opacity', 0.4);
-                    row.find('.btn-sl').attr('disabled', true).css('opacity', 0.4);
-                    row.find('.btn-t2').removeAttr('disabled').css('opacity', 1);
-                    row.find('.hl-edit-btn[data-target="low"]').attr('disabled', true).css('opacity', 0.4);
-                }
-                else if(type === 'SL') {
-                    badge.text('SL');
-                    btn.attr('disabled', true).css('opacity', 0.4);
-                    row.find('.btn-t1, .btn-t2, .btn-t3').attr('disabled', true).css('opacity', 0.4);
-                    row.find('.hl-edit-btn[data-target="high"]').attr('disabled', true).css('opacity', 0.4);
-                    row.find('.high-btn').attr('disabled', true).css('opacity', 0.4);
-                }
-                else if(type === 'T2') { 
-                    badge.text('T2'); 
-                    btn.attr('disabled', true).css('opacity', 0.4); 
-                    row.find('.btn-t3').removeAttr('disabled').css('opacity', 1); 
-                }
-                else if(type === 'T3') { 
-                    badge.text('T3'); 
-                    btn.attr('disabled', true).css('opacity', 0.4); 
+                // CRITICAL: Replace table row with new HTML from server
+                if(res.data && res.data.html) {
+                    $('#row-'+id).replaceWith(res.data.html);
                 }
             } else {
                 alert('Action failed');
@@ -177,7 +143,9 @@ jQuery(document).ready(function($) {
                 if(res.success) { 
                     row.remove(); 
                     if(window.TSB && TSB.showToast) TSB.showToast('Deleted');
-                    if(res.data && window.TSB) TSB.updateDashboard(res.data);
+                    if(res.data && res.data.stats && window.TSB) {
+                        TSB.updateDashboard(res.data.stats);
+                    }
                 } else {
                     alert('Permission Denied via Settings');
                 }

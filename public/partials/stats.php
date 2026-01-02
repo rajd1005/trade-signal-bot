@@ -5,14 +5,14 @@
     </div>
     <div class="stat-box">
         <span class="stat-label">Wins</span>
-        <span class="stat-val green" id="dash-w"><?php echo intval($stats->wins); ?></span>
+        <span class="stat-val green" id="dash-w"><?php echo intval($stats->w); ?></span>
     </div>
     <div class="stat-box">
         <span class="stat-label">Losses</span>
-        <span class="stat-val red" id="dash-l"><?php echo intval($stats->losses); ?></span>
+        <span class="stat-val red" id="dash-l"><?php echo intval($stats->l); ?></span>
     </div>
     <div class="stat-box">
         <span class="stat-label">Pending</span>
-        <span class="stat-val blue" id="dash-p"><?php echo intval($stats->pending); ?></span>
+        <span class="stat-val blue" id="dash-p"><?php echo intval($stats->p); ?></span>
     </div>
 </div>

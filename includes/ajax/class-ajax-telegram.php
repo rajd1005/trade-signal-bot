@@ -12,18 +12,27 @@ class TSB_Ajax_Telegram {
         $id = intval($_POST['trade_id']);
         $type = sanitize_text_field($_POST['type']);
         $table = $wpdb->prefix . 'tsb_trade_journal';
+        
+        // Fetch original trade data
         $trade = $wpdb->get_row("SELECT * FROM $table WHERE id = $id", ARRAY_A);
         
-        if(!$trade) wp_send_json_error();
+        if(!$trade) { wp_send_json_error(); return; }
         
         $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
         $price = 0; $profit = 0; $lot = floatval($trade['lot_size']); $entry = floatval($trade['entry_price']);
         $tpl = ""; $target_label = $type; $should_send = false;
 
+        // Logic Handler
         if($type == 'Entry') {
             $price = $entry;
             $tpl = get_option('tsb_tpl_active', "🔵 *ACTIVE*");
+            
+            // 1. Update Database
             $wpdb->update($table, array('trade_status'=>'Active'), array('id'=>$id));
+            
+            // 2. CRITICAL FIX: Manually update local array to ensure HTML is correct immediately
+            $trade['trade_status'] = 'Active'; 
+            
             $should_send = get_option('tsb_msg_on_active', 1);
         } elseif($type == 'High') {
             $price = floatval($trade['high_price']);
@@ -41,10 +50,16 @@ class TSB_Ajax_Telegram {
             if($type == 'SL') { $price = $trade['sl_price']; $should_send = get_option('tsb_msg_on_sl', 1); }
 
             $profit = ($price - $entry) * $lot; 
+            
+            // Update Database & Local Array
             $wpdb->update($table, array('trade_status'=>$type, 'profit_loss'=>round($profit, 2)), array('id'=>$id));
+            $trade['trade_status'] = $type;
+            $trade['profit_loss'] = round($profit, 2);
+
             $tpl = ($type == 'SL') ? get_option('tsb_tpl_sl') : get_option('tsb_tpl_target');
         }
 
+        // Telegram Sending Logic
         if($should_send) {
             if(!$tpl) $tpl = "{symbol} Update: {price}";
             $msg_pl = round($profit * $pl_mult, 2); 
@@ -59,21 +74,36 @@ class TSB_Ajax_Telegram {
             }
         }
         
-        $this->return_updated_data($id, $profit * $pl_mult);
+        // Generate HTML using the LOCALLY modified object (guarantees accuracy)
+        $html = TSB_Frontend_UI::get_trade_row_html((object)$trade);
+        
+        // Return Data
+        $this->return_updated_data($id, $profit * $pl_mult, $html);
     }
 
-    private function return_updated_data($id, $row_pl) {
+    private function return_updated_data($id, $row_pl, $html) {
         global $wpdb;
         $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
         $today_start = current_time('Y-m-d 00:00:00'); $today_end = current_time('Y-m-d 23:59:59');
         
-        $stats = $wpdb->get_row($wpdb->prepare("SELECT SUM(profit_loss) as tpl, SUM(CASE WHEN profit_loss>0 THEN 1 ELSE 0 END) as w, SUM(CASE WHEN profit_loss<0 THEN 1 ELSE 0 END) as l, SUM(CASE WHEN trade_status='Pending' OR trade_status='Active' THEN 1 ELSE 0 END) as p FROM {$wpdb->prefix}tsb_trade_journal WHERE entry_date BETWEEN %s AND %s", $today_start, $today_end));
+        // FIX: Removed "OR trade_status='Active'" so Pending count drops when Active is clicked
+        $stats = $wpdb->get_row($wpdb->prepare("SELECT SUM(profit_loss) as tpl, SUM(CASE WHEN profit_loss>0 THEN 1 ELSE 0 END) as w, SUM(CASE WHEN profit_loss<0 THEN 1 ELSE 0 END) as l, SUM(CASE WHEN trade_status='Pending' THEN 1 ELSE 0 END) as p FROM {$wpdb->prefix}tsb_trade_journal WHERE entry_date BETWEEN %s AND %s", $today_start, $today_end));
         
         $total_pl = ($stats->tpl) ? ($stats->tpl * $pl_mult) : 0;
         
         $total_closed = intval($stats->w) + intval($stats->l);
         $accuracy = ($total_closed > 0) ? round((intval($stats->w) / $total_closed) * 100) : 0;
         
-        wp_send_json_success(array('pl' => number_format($total_pl, 2), 'w' => intval($stats->w), 'l' => intval($stats->l), 'p' => intval($stats->p), 'acc' => $accuracy, 'row_pl' => number_format($row_pl, 2)));
+        wp_send_json_success(array(
+            'stats' => array(
+                'pl' => number_format($total_pl, 2), 
+                'w' => intval($stats->w), 
+                'l' => intval($stats->l), 
+                'p' => intval($stats->p), 
+                'acc' => $accuracy
+            ),
+            'row_pl' => number_format($row_pl, 2),
+            'html' => $html
+        ));
     }
 }

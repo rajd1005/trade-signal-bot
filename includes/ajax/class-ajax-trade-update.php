@@ -81,7 +81,6 @@ class TSB_Ajax_Trade_Update {
         $updated_row = $wpdb->get_row( "SELECT * FROM $table WHERE id = $id" );
         $html = TSB_Frontend_UI::get_trade_row_html($updated_row);
         
-        // Fix: Return Stats so status bar updates
         $stats = $this->get_current_stats();
 
         wp_send_json_success( array( 
@@ -97,29 +96,26 @@ class TSB_Ajax_Trade_Update {
         $v     = floatval( $_POST['val'] );
         $table = $wpdb->prefix . 'tsb_trade_journal';
 
-        if ( in_array( $f, array( 'high_price', 'low_price' ) ) ) {
+        if ( $f == 'high_price' ) { // Removed Low
             
             $wpdb->update( $table, array( $f => $v ), array( 'id' => $id ) );
             
-            $new_pl = 0;
-            if ( $f == 'high_price' && $v > 0 ) {
+            if ( $v > 0 ) {
                 $trade = $wpdb->get_row( "SELECT entry_price, lot_size FROM $table WHERE id = $id", ARRAY_A );
                 if ( $trade ) {
                     $new_pl = ( $v - floatval( $trade['entry_price'] ) ) * floatval( $trade['lot_size'] );
                     $wpdb->update( $table, array( 'profit_loss' => $new_pl ), array( 'id' => $id ) );
                 }
-            } else {
-                $new_pl = $wpdb->get_var( "SELECT profit_loss FROM $table WHERE id = $id" );
             }
 
-            $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
-            $display_pl = number_format( $new_pl * $pl_mult, 2 );
+            $updated_row = $wpdb->get_row( "SELECT * FROM $table WHERE id = $id" );
+            $html = TSB_Frontend_UI::get_trade_row_html($updated_row);
 
             $stats = $this->get_current_stats();
 
             wp_send_json_success( array(
-                'pl'    => $display_pl,
-                'stats' => $stats
+                'stats' => $stats,
+                'html'  => $html
             ) );
 
         } else {
@@ -127,19 +123,19 @@ class TSB_Ajax_Trade_Update {
         }
     }
 
-    // Helper to get stats
     private function get_current_stats() {
         global $wpdb;
         $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
         $today_start = current_time( 'Y-m-d 00:00:00' );
         $today_end   = current_time( 'Y-m-d 23:59:59' );
         
+        // FIXED: Pending only Pending
         $stats = $wpdb->get_row( $wpdb->prepare( "
             SELECT 
                 SUM(profit_loss) as tpl, 
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as w, 
                 SUM(CASE WHEN profit_loss < 0 THEN 1 ELSE 0 END) as l, 
-                SUM(CASE WHEN trade_status = 'Pending' OR trade_status = 'Active' THEN 1 ELSE 0 END) as p 
+                SUM(CASE WHEN trade_status = 'Pending' THEN 1 ELSE 0 END) as p 
             FROM {$wpdb->prefix}tsb_trade_journal 
             WHERE entry_date BETWEEN %s AND %s
         ", $today_start, $today_end ) );

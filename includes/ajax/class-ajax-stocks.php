@@ -10,11 +10,12 @@ class TSB_Ajax_Stocks {
     public function get_stock_details() {
         global $wpdb;
         $symbol = sanitize_text_field( $_POST['symbol'] );
-        $result = $wpdb->get_row( $wpdb->prepare( "SELECT stop_loss, lot_size FROM {$wpdb->prefix}tsb_master_stocks WHERE symbol_name = %s", $symbol ), ARRAY_A );
+        $result = $wpdb->get_row( $wpdb->prepare( "SELECT stop_loss, lot_size, expiry_type, expiry_day FROM {$wpdb->prefix}tsb_master_stocks WHERE symbol_name = %s", $symbol ), ARRAY_A );
         if($result) {
             $result['m_t1'] = get_option('tsb_calc_t1', 0.5);
             $result['m_t2'] = get_option('tsb_calc_t2', 1.0);
             $result['m_t3'] = get_option('tsb_calc_t3', 1.5);
+            $result['skip_today'] = get_option('tsb_skip_expiry_today', 0); // Pass Setting
             wp_send_json_success( $result );
         } else wp_send_json_error();
     }
