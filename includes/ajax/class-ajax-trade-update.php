@@ -4,8 +4,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class TSB_Ajax_Trade_Update {
 
     public function __construct() {
+        // Logged-in
         add_action( 'wp_ajax_tsb_update_entry', array( $this, 'update_entry' ) );
         add_action( 'wp_ajax_tsb_update_live', array( $this, 'update_live_data' ) );
+        
+        // Logged-out
+        add_action( 'wp_ajax_nopriv_tsb_update_entry', array( $this, 'update_entry' ) );
+        add_action( 'wp_ajax_nopriv_tsb_update_live', array( $this, 'update_live_data' ) );
     }
 
     public function update_entry() {
@@ -64,8 +69,8 @@ class TSB_Ajax_Trade_Update {
                 $wpdb->update( 
                     $table, 
                     array(
-                        'telegram_msg_id' => $msg_id, // New Parent
-                        'reply_ids'       => $old_ids . $trade['telegram_msg_id'] // Archive Old
+                        'telegram_msg_id' => $msg_id, 
+                        'reply_ids'       => $old_ids . $trade['telegram_msg_id'] 
                     ), 
                     array( 'id' => $id ) 
                 );
@@ -83,14 +88,9 @@ class TSB_Ajax_Trade_Update {
 
         if ( in_array( $f, array( 'high_price', 'low_price' ) ) ) {
             
-            // 1. Update the High/Low value
             $wpdb->update( $table, array( $f => $v ), array( 'id' => $id ) );
             
-            // 2. Recalculate Profit/Loss for this Row (Only if High is updated)
             $new_pl = 0;
-            // Fetch current state to calculate P/L logic properly (High - Entry * Lot)
-            // If updating Low, P/L doesn't usually change until exit, but if you want Low to affect P/L logic, add here.
-            // Standard: High determines running profit.
             if ( $f == 'high_price' && $v > 0 ) {
                 $trade = $wpdb->get_row( "SELECT entry_price, lot_size FROM $table WHERE id = $id", ARRAY_A );
                 if ( $trade ) {
@@ -98,15 +98,12 @@ class TSB_Ajax_Trade_Update {
                     $wpdb->update( $table, array( 'profit_loss' => $new_pl ), array( 'id' => $id ) );
                 }
             } else {
-                // If updating Low, or High is 0, fetch existing P/L to return it without change, or 0
                 $new_pl = $wpdb->get_var( "SELECT profit_loss FROM $table WHERE id = $id" );
             }
 
-            // 3. Prepare Row P/L for Display
             $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
             $display_pl = number_format( $new_pl * $pl_mult, 2 );
 
-            // 4. Recalculate Global Dashboard Stats (Real-Time)
             $today_start = current_time( 'Y-m-d 00:00:00' );
             $today_end   = current_time( 'Y-m-d 23:59:59' );
             
@@ -122,14 +119,12 @@ class TSB_Ajax_Trade_Update {
             
             $total_pl = ( $stats->tpl ) ? ( $stats->tpl * $pl_mult ) : 0;
             
-            // Calculate Accuracy
             $total_closed = intval( $stats->w ) + intval( $stats->l );
             $acc = ( $total_closed > 0 ) ? round( ( intval( $stats->w ) / $total_closed ) * 100 ) : 0;
 
-            // 5. Send JSON Response
             wp_send_json_success( array(
-                'pl'    => $display_pl, // For Row Update
-                'stats' => array(       // For Dashboard Update
+                'pl'    => $display_pl,
+                'stats' => array(
                     'pl'  => number_format( $total_pl, 2 ),
                     'w'   => intval( $stats->w ),
                     'l'   => intval( $stats->l ),

@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class TSB_Ajax_Telegram {
     public function __construct() {
         add_action( 'wp_ajax_tsb_trigger_telegram', array( $this, 'trigger_telegram_update' ) );
+        add_action( 'wp_ajax_nopriv_tsb_trigger_telegram', array( $this, 'trigger_telegram_update' ) );
     }
 
     public function trigger_telegram_update() {
@@ -70,7 +71,6 @@ class TSB_Ajax_Telegram {
         
         $total_pl = ($stats->tpl) ? ($stats->tpl * $pl_mult) : 0;
         
-        // Calculate Accuracy
         $total_closed = intval($stats->w) + intval($stats->l);
         $accuracy = ($total_closed > 0) ? round((intval($stats->w) / $total_closed) * 100) : 0;
         

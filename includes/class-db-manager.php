@@ -20,7 +20,7 @@ class TSB_DB_Manager {
         $table_journal = $wpdb->prefix . 'tsb_trade_journal';
         $sql_journal = "CREATE TABLE $table_journal (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
-            entry_date datetime DEFAULT '0000-00-00 00:00:00',
+            entry_date datetime DEFAULT CURRENT_TIMESTAMP,
             channel_name varchar(50) NOT NULL,
             symbol_display varchar(100) NOT NULL,
             lot_size int NOT NULL DEFAULT 1,

@@ -12,7 +12,10 @@ jQuery(document).ready(function($) {
         for (var i = 0; i < opts.length; i++) { if (opts[i].value === val) { found = true; break; } }
         
         if(found) {
-            $.post(tsb_ajax.ajax_url, { action: 'tsb_get_stock_details', symbol: val }, function(res) {
+            $.post(tsb_ajax.ajax_url, { 
+                action: 'tsb_get_stock_details', 
+                symbol: val 
+            }, function(res) {
                 if(res.success) {
                     $('#sl_points_db').val(res.data.stop_loss); $('#lot_size').val(res.data.lot_size);
                     $('#view_lot_size').val(res.data.lot_size); $('#view_sl').val(res.data.stop_loss);
@@ -34,7 +37,6 @@ jQuery(document).ready(function($) {
         }
     });
 
-    // CE/PE Toggle
     $(document).on('click', '.toggle-group .type-btn', function(e) {
         e.preventDefault();
         var btn = $(this);
@@ -44,8 +46,6 @@ jQuery(document).ready(function($) {
         $('#ce_pe').val(btn.data('val'));
     });
 
-    // FIXED ACCORDION LOGIC
-    // Finds the closest form, then searches for details-content inside it.
     $(document).on('click', '.details-toggle', function(e){ 
         e.preventDefault();
         var form = $(this).closest('#tsb-trade-form');
@@ -57,16 +57,22 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         var full_sym = $('#stock_name').val() + ' ' + $('#strike_price').val() + ' ' + $('#ce_pe').val() + ' (' + $('#expiry').val() + ')';
         var data = {
-            action: 'tsb_submit_trade', channel_name: $('#channel_name').val(), symbol_display: full_sym,
-            lot_size: $('#lot_size').val(), entry_price: $('#entry_price').val(), sl_price: $('#sl_price').val(),
+            action: 'tsb_submit_trade', 
+            channel_name: $('#channel_name').val(), 
+            symbol_display: full_sym,
+            lot_size: $('#lot_size').val(), 
+            entry_price: $('#entry_price').val(), 
+            sl_price: $('#sl_price').val(),
             t1: $('#t1').val(), t2: $('#t2').val(), t3: $('#t3').val()
         };
         $.post(tsb_ajax.ajax_url, data, function(res) {
             if(res.success) { 
                 if(window.TSB && window.TSB.showToast) TSB.showToast('Trade Published!');
                 if(res.data.html) $('#journal-body').prepend(res.data.html); 
-                if(res.data.stats) TSB.updateDashboard(res.data.stats); // UPDATE STATS IMMEDIATELY
+                if(res.data.stats) TSB.updateDashboard(res.data.stats); 
                 $('#entry_price').val('');
+            } else {
+                alert(res.data || 'Error');
             }
         });
     });

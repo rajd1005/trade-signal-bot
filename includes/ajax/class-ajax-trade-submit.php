@@ -4,8 +4,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class TSB_Ajax_Trade_Submit {
 
     public function __construct() {
+        // Logged-in users
         add_action( 'wp_ajax_tsb_submit_trade', array( $this, 'submit_trade' ) );
         add_action( 'wp_ajax_tsb_delete_trade', array( $this, 'delete_trade' ) );
+        
+        // Logged-out users
+        add_action( 'wp_ajax_nopriv_tsb_submit_trade', array( $this, 'submit_trade' ) );
+        add_action( 'wp_ajax_nopriv_tsb_delete_trade', array( $this, 'delete_trade' ) );
     }
 
     public function submit_trade() {
@@ -55,39 +60,9 @@ class TSB_Ajax_Trade_Submit {
             }
         }
 
-        // Render the new HTML Row
+        // Render the new HTML Row using the Shared Helper
         $row = (object)array_merge($data, array('id'=>$insert_id, 'high_price'=>0, 'low_price'=>0, 'profit_loss'=>0));
-        
-        // Fetch specific permissions to render buttons correctly
-        $allow_edit = (int) get_option('tsb_allow_edit', 0);
-        $allow_upd  = (int) get_option('tsb_allow_entry_update', 0);
-        
-        ob_start();
-        ?>
-        <tr id="row-<?php echo $row->id; ?>" data-entry="<?php echo $row->entry_price; ?>" data-t1="<?php echo $row->t1; ?>" data-t2="<?php echo $row->t2; ?>" data-t3="<?php echo $row->t3; ?>" data-status="Pending">
-            <td style="font-size:10px; white-space:nowrap; color:#666;"><?php echo date('d M H:i', strtotime($row->entry_date)); ?></td>
-            <td><strong><?php echo $row->symbol_display; ?></strong><br><small style="font-size:10px; color:#888;"><?php echo $row->channel_name; ?></small></td>
-            <td style="font-weight:bold;">
-                <?php echo $row->entry_price; ?>
-                <?php if($allow_upd): ?>
-                    <button class="edit-entry-btn" data-id="<?php echo $row->id; ?>" style="font-size:10px; border:none; background:none; color:#2196f3; cursor:pointer;">✎</button>
-                <?php endif; ?>
-            </td>
-            <td style="color:#c00;"><?php echo $row->sl_price; ?></td>
-            <td style="font-size:10px;">T1:<?php echo $row->t1; ?><br>T2:<?php echo $row->t2; ?><br>T3:<?php echo $row->t3; ?></td>
-            <td>
-                <div style="display:flex; align-items:center; margin-bottom:2px;"><span style="font-size:9px; width:12px;">H</span><span class="hl-display hl-high-display" data-id="<?php echo $row->id; ?>">-</span><input type="number" step="0.05" class="live-update hl-input hl-high-input" data-field="high_price" data-id="<?php echo $row->id; ?>" value="0" style="display:none; width:50px; font-size:11px;" disabled><button class="hl-edit-btn" data-target="high" data-id="<?php echo $row->id; ?>" disabled style="border:none; background:none; color:#2196f3; cursor:pointer; font-size:12px; opacity:0.4;">✎</button><button class="high-btn tg-act" data-id="<?php echo $row->id; ?>" data-type="High" disabled style="opacity:0.4;" title="Trigger High">📢</button></div>
-                <div style="display:flex; align-items:center;"><span style="font-size:9px; width:12px;">L</span><span class="hl-display hl-low-display" data-id="<?php echo $row->id; ?>">-</span><input type="number" step="0.05" class="live-update hl-input hl-low-input" data-field="low_price" data-id="<?php echo $row->id; ?>" value="0" style="display:none; width:50px; font-size:11px;" disabled><button class="hl-edit-btn" data-target="low" data-id="<?php echo $row->id; ?>" disabled style="border:none; background:none; color:#2196f3; cursor:pointer; font-size:12px; opacity:0.4;">✎</button></div>
-            </td>
-            <td><span class="pl-text" style="font-weight:bold; color:green">0.00</span><br><span class="status-badge" style="font-size:9px;">Pending</span></td>
-            <td style="min-width:130px;">
-                <div style="margin-bottom:2px;"><button class="btn-tiny tg-act" data-id="<?php echo $row->id; ?>" data-type="Entry" style="background:#2196f3; color:#fff; width:100%;">Active</button></div>
-                <div style="display:flex; gap:1px;"><button class="btn-tiny tg-act btn-sl" data-id="<?php echo $row->id; ?>" data-type="SL" disabled style="opacity:0.4;">SL</button><button class="btn-tiny tg-act btn-t1" data-id="<?php echo $row->id; ?>" data-type="T1" disabled style="opacity:0.4;">T1</button><button class="btn-tiny tg-act btn-t2" data-id="<?php echo $row->id; ?>" data-type="T2" disabled style="opacity:0.4;">T2</button><button class="btn-tiny tg-act btn-t3" data-id="<?php echo $row->id; ?>" data-type="T3" disabled style="opacity:0.4;">T3</button></div>
-            </td>
-            <?php if($allow_edit): ?><td><button class="delete-row" data-id="<?php echo $row->id; ?>" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">X</button></td><?php endif; ?>
-        </tr>
-        <?php
-        $html = ob_get_clean();
+        $html = TSB_Frontend_UI::get_trade_row_html($row);
         
         // Calculate & Return Fresh Stats
         $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
@@ -110,8 +85,8 @@ class TSB_Ajax_Trade_Submit {
 
     public function delete_trade() {
         global $wpdb;
-        // Verify Permission
-        if(!get_option('tsb_allow_edit', 0)) { wp_send_json_error('Permission Denied'); return; }
+        // Verify Permission (Plugin setting check only, no User Role check)
+        if(!get_option('tsb_allow_edit', 0)) { wp_send_json_error('Permission Denied via Settings'); return; }
         
         $id = intval($_POST['id']);
         $table = $wpdb->prefix . 'tsb_trade_journal';
@@ -134,7 +109,7 @@ class TSB_Ajax_Trade_Submit {
             // Delete DB Entry
             $wpdb->delete($table, array('id' => $id));
             
-            // Return Fresh Stats (Matches Submit Logic)
+            // Return Fresh Stats
             $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
             $today_start = date('Y-m-d 00:00:00', current_time('timestamp'));
             $today_end = date('Y-m-d 23:59:59', current_time('timestamp'));
