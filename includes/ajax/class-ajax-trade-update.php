@@ -76,7 +76,18 @@ class TSB_Ajax_Trade_Update {
                 );
             }
         }
-        wp_send_json_success();
+        
+        // Fetch fresh row and return HTML for UI update
+        $updated_row = $wpdb->get_row( "SELECT * FROM $table WHERE id = $id" );
+        $html = TSB_Frontend_UI::get_trade_row_html($updated_row);
+        
+        // Fix: Return Stats so status bar updates
+        $stats = $this->get_current_stats();
+
+        wp_send_json_success( array( 
+            'html' => $html,
+            'stats' => $stats
+        ) );
     }
 
     public function update_live_data() {
@@ -104,37 +115,46 @@ class TSB_Ajax_Trade_Update {
             $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
             $display_pl = number_format( $new_pl * $pl_mult, 2 );
 
-            $today_start = current_time( 'Y-m-d 00:00:00' );
-            $today_end   = current_time( 'Y-m-d 23:59:59' );
-            
-            $stats = $wpdb->get_row( $wpdb->prepare( "
-                SELECT 
-                    SUM(profit_loss) as tpl, 
-                    SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as w, 
-                    SUM(CASE WHEN profit_loss < 0 THEN 1 ELSE 0 END) as l, 
-                    SUM(CASE WHEN trade_status = 'Pending' OR trade_status = 'Active' THEN 1 ELSE 0 END) as p 
-                FROM {$wpdb->prefix}tsb_trade_journal 
-                WHERE entry_date BETWEEN %s AND %s
-            ", $today_start, $today_end ) );
-            
-            $total_pl = ( $stats->tpl ) ? ( $stats->tpl * $pl_mult ) : 0;
-            
-            $total_closed = intval( $stats->w ) + intval( $stats->l );
-            $acc = ( $total_closed > 0 ) ? round( ( intval( $stats->w ) / $total_closed ) * 100 ) : 0;
+            $stats = $this->get_current_stats();
 
             wp_send_json_success( array(
                 'pl'    => $display_pl,
-                'stats' => array(
-                    'pl'  => number_format( $total_pl, 2 ),
-                    'w'   => intval( $stats->w ),
-                    'l'   => intval( $stats->l ),
-                    'p'   => intval( $stats->p ),
-                    'acc' => $acc
-                )
+                'stats' => $stats
             ) );
 
         } else {
             wp_send_json_error( 'Invalid Field' );
         }
+    }
+
+    // Helper to get stats
+    private function get_current_stats() {
+        global $wpdb;
+        $pl_mult = get_option( 'tsb_pl_multiplier', 6 );
+        $today_start = current_time( 'Y-m-d 00:00:00' );
+        $today_end   = current_time( 'Y-m-d 23:59:59' );
+        
+        $stats = $wpdb->get_row( $wpdb->prepare( "
+            SELECT 
+                SUM(profit_loss) as tpl, 
+                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as w, 
+                SUM(CASE WHEN profit_loss < 0 THEN 1 ELSE 0 END) as l, 
+                SUM(CASE WHEN trade_status = 'Pending' OR trade_status = 'Active' THEN 1 ELSE 0 END) as p 
+            FROM {$wpdb->prefix}tsb_trade_journal 
+            WHERE entry_date BETWEEN %s AND %s
+        ", $today_start, $today_end ) );
+        
+        $total_pl = ( $stats->tpl ) ? ( $stats->tpl * $pl_mult ) : 0;
+        
+        $total_closed = intval( $stats->w ) + intval( $stats->l );
+        $acc = ( $total_closed > 0 ) ? round( ( intval( $stats->w ) / $total_closed ) * 100 ) : 0;
+
+        return array(
+            'pl'  => number_format( $total_pl, 2 ),
+            'w'   => intval( $stats->w ),
+            'l'   => intval( $stats->l ),
+            'p'   => intval( $stats->p ),
+            'acc' => $acc
+        );
     }
 }

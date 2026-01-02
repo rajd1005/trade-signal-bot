@@ -10,7 +10,17 @@
                 <div class="form-section-main">
                     <div class="compact-row">
                         <div class="col"><label>Channel</label><select name="channel_name" id="channel_name"><?php foreach($available_channels as $ac): ?><option value="<?php echo esc_attr($ac['name']); ?>"><?php echo esc_html($ac['name']); ?></option><?php endforeach; ?></select></div>
-                        <div class="col"><label>Instrument</label><input list="stock_list" name="stock_name" id="stock_name" placeholder="Search"><datalist id="stock_list"><?php foreach($stocks as $s): ?><option value="<?php echo esc_attr($s->symbol_name); ?>"><?php endforeach; ?></datalist></div>
+                        
+                        <div class="col">
+                            <label>Instrument</label>
+                            <select name="stock_name" id="stock_name">
+                                <option value="">Select Stock</option>
+                                <?php foreach($stocks as $s): ?>
+                                    <option value="<?php echo esc_attr($s->symbol_name); ?>"><?php echo esc_html($s->symbol_name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
                         <div class="col" style="max-width:80px;"><label>Strike</label><input type="number" id="strike_price" placeholder="2400"></div>
                     </div>
                     <div class="compact-row" style="align-items:flex-end;">
@@ -18,7 +28,7 @@
                             <div class="toggle-group"><button type="button" class="type-btn active" data-val="CE">CE</button><button type="button" class="type-btn" data-val="PE">PE</button><input type="hidden" id="ce_pe" value="CE"></div>
                         </div>
                         <div class="col"><label>Entry</label><input type="number" step="0.05" id="entry_price" placeholder="0.00" required></div>
-                        <div class="col"><button type="submit" id="submit-trade">Publish</button></div>
+                        <div class="col" id="submit-col"><button type="submit" id="submit-trade">Publish</button></div>
                     </div>
                 </div>
                 <div class="form-section-details details-content" <?php echo $layout_style; ?>>

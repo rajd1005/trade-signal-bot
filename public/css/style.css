@@ -38,6 +38,16 @@
     .compact-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; } /* Stack inputs */
     .col { width: 100%; } /* Full width inputs */
     .col[style*="max-width"] { max-width: 100% !important; } /* Override max-widths on mobile */
+    
+    /* FIX: Publish Button on Mobile */
+    #submit-trade {
+        height: 44px !important; /* Larger touch target */
+        margin-top: 10px;
+        font-size: 14px !important;
+    }
+    #submit-col {
+        margin-top: 5px;
+    }
 }
 
 /* Inputs */

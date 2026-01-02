@@ -4,14 +4,11 @@ jQuery(document).ready(function($) {
     $('#trade_date').val(now.toLocaleDateString('en-GB'));
     var m_t1=0.5, m_t2=1.0, m_t3=1.5;
 
-    // Stock Fetch
-    $('#stock_name').on('input', function() {
+    // Stock Fetch (Updated to 'change' for Select dropdown)
+    $('#stock_name').on('change', function() {
         var val = $(this).val();
-        var opts = $('#stock_list option');
-        var found = false;
-        for (var i = 0; i < opts.length; i++) { if (opts[i].value === val) { found = true; break; } }
         
-        if(found) {
+        if(val) {
             $.post(tsb_ajax.ajax_url, { 
                 action: 'tsb_get_stock_details', 
                 symbol: val 
